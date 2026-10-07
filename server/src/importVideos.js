@@ -5,7 +5,7 @@
 // (Vercel Blob) are re-uploaded and repointed, keeping their likes and views.
 // Needs ffmpeg and the R2_* env vars.
 // Run: npm --prefix server run import-videos -- ../videos
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -85,11 +85,8 @@ function needsTranscode(file) {
   const codec = probe(file, ['-select_streams', 'v:0', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0']);
   if (codec !== 'h264') return true;
   // Top-level atom order: playback can only start early when moov comes before mdat.
-  const trace = execFileSync('ffprobe', ['-v', 'trace', file], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'ignore', 'pipe'],
-    maxBuffer: 512 * 1024 * 1024,
-  });
+  // ffprobe writes its trace to stderr.
+  const trace = spawnSync('ffprobe', ['-v', 'trace', file], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 }).stderr;
   return /type:'mdat'/.test(trace.split(/type:'moov'/)[0]);
 }
 
@@ -116,7 +113,9 @@ async function upload(file, owner) {
     transcode(src, (src = path.join(tmp, name)));
   }
   try {
-    return await putFile(`videos/${owner}/${name}`, fs.createReadStream(src), contentType, fs.statSync(src).size);
+    // A Buffer (not a stream) so the S3 client can retry a dropped connection.
+    const body = fs.readFileSync(src);
+    return await putFile(`videos/${owner}/${name}`, body, contentType, body.length);
   } finally {
     if (src.startsWith(tmp)) fs.rmSync(src, { force: true });
   }
