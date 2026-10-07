@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /upload
+Disallow: /me
+
+Sitemap: https://www.onlyreal.cc/sitemap.xml
