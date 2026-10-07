@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "import-videos": "node src/importVideos.js"
   },
   "dependencies": {
     "@clerk/express": "^2.1.76",

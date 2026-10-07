@@ -11,6 +11,8 @@ const WHEEL_GESTURE_GAP_MS = 260;
 
 let mutedPref = true; // shared across feeds for the session; browsers require muted autoplay at first
 
+const newSeed = () => Math.random().toString(36).slice(2);
+
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export default function ReelFeed({ endpoint, empty, initial }) {
@@ -24,6 +26,7 @@ export default function ReelFeed({ endpoint, empty, initial }) {
   const containerRef = useRef(null);
   const activeRef = useRef(0);
   const countRef = useRef(0);
+  const seedRef = useRef(newSeed()); // shuffles the For You order; new on every load or tab switch
   activeRef.current = active;
   countRef.current = videos.length;
 
@@ -33,6 +36,7 @@ export default function ReelFeed({ endpoint, empty, initial }) {
     setHasMore(!initial);
     setError('');
     setActive(0);
+    seedRef.current = newSeed();
     if (containerRef.current) containerRef.current.scrollTop = 0;
   }, [endpoint, initial]);
 
@@ -40,7 +44,7 @@ export default function ReelFeed({ endpoint, empty, initial }) {
     if (loading || !hasMore || !endpoint) return;
     setLoading(true);
     try {
-      const d = await api(`${endpoint}?page=${page}`);
+      const d = await api(`${endpoint}?page=${page}&seed=${seedRef.current}`);
       setVideos((prev) => {
         const seen = new Set(prev.map((v) => v.id));
         return [...prev, ...d.videos.filter((v) => !seen.has(v.id))];

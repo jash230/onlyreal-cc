@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
 import { del } from '@vercel/blob';
@@ -22,29 +23,34 @@ async function sendPage(res, videos, viewer) {
 // Rejects bad ObjectIds with 404 before any route touches the DB.
 router.param('id', (req, res, next, id) => (isId(id) ? next() : res.status(404).json({ error: 'Video not found' })));
 
-// For You: blend of engagement and recency.
+// Deterministic uniform number in (0, 1) for a (seed, id) pair.
+function seededRandom(seed, id) {
+  const h = crypto.createHash('sha1').update(`${seed}:${id}`).digest();
+  return (h.readUInt32BE(0) + 1) / 4294967297;
+}
+
+// For You: weighted shuffle. Each page load sends a fresh random `seed`, so the order differs on
+// every refresh, while pages within one load share the seed and never repeat. Engaging and recent
+// clips get a higher weight, i.e. tend to surface earlier (Efraimidis–Spirakis: key = u^(1/w)).
 router.get(
   '/feed',
   optionalUser,
   ah(async (req, res) => {
-    const hoursOld = { $divide: [{ $subtract: ['$$NOW', '$createdAt'] }, 3600000] };
-    const docs = await Video.aggregate([
-      { $match: { hidden: false } },
-      {
-        $addFields: {
-          score: {
-            $divide: [
-              { $add: [{ $multiply: ['$likeCount', 3] }, { $multiply: ['$commentCount', 5] }, { $multiply: ['$views', 0.1] }] },
-              { $pow: [{ $add: [hoursOld, 2] }, 1.5] },
-            ],
-          },
-        },
-      },
-      { $sort: { score: -1, _id: -1 } },
-      { $skip: page(req) * PAGE_SIZE },
-      { $limit: PAGE_SIZE },
-    ]);
-    await Video.populate(docs, { path: 'user' });
+    const seed = String(req.query.seed || crypto.randomUUID()).slice(0, 64);
+    const now = Date.now();
+    const all = await Video.find({ hidden: false }, 'likeCount commentCount views createdAt').lean();
+    const ranked = all
+      .map((v) => {
+        const engagement = v.likeCount * 3 + v.commentCount * 5 + v.views * 0.1;
+        const daysOld = (now - v.createdAt) / 864e5;
+        const weight = (1 + Math.log1p(engagement)) * (1 + 2 / (1 + daysOld));
+        return { id: v._id, key: Math.pow(seededRandom(seed, v._id), 1 / weight) };
+      })
+      .sort((a, b) => b.key - a.key);
+    const ids = ranked.slice(page(req) * PAGE_SIZE, (page(req) + 1) * PAGE_SIZE).map((r) => r.id);
+    const docs = await Video.find({ _id: { $in: ids } }).populate('user').lean();
+    const order = new Map(ids.map((id, i) => [String(id), i]));
+    docs.sort((a, b) => order.get(String(a._id)) - order.get(String(b._id)));
     await sendPage(res, docs, req.user);
   })
 );

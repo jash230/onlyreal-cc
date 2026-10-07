@@ -13,3 +13,5 @@ client/dist
 
 .DS_Store
 .vercel
+
+videos/
