@@ -5,8 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import mongoose from 'mongoose';
-import { BlobError } from '@upstash/blob';
-import { getBucket } from './blob.js';
+import { deleteFiles } from './blob.js';
 import { config } from './config.js';
 import { Video, Like, Comment } from './models.js';
 
@@ -33,13 +32,8 @@ if (!apply) {
     Like.deleteMany({ video: { $in: ids } }),
     Comment.deleteMany({ video: { $in: ids } }),
   ]);
-  let failed = [];
-  try {
-    if (gone.length) await getBucket().del(gone.map((v) => v.filename));
-  } catch (e) {
-    failed = BlobError.is(e) && e.code === 'partial_delete' ? e.failed ?? [] : gone.map((v) => v.filename);
-    console.error(`blob delete failed: ${e.message}`);
-  }
+  // Clips still pointing at the old Vercel store have nothing in R2; deleting their keys is a no-op.
+  const failed = gone.length ? await deleteFiles(gone.map((v) => v.filename)) : [];
   console.log(`Deleted ${videos.deletedCount} clips, ${likes.deletedCount} likes, ${comments.deletedCount} comments`);
   if (failed.length) {
     // The records are gone, so a re-run won't find these again; keep the paths for a later cleanup.

@@ -25,7 +25,7 @@ npm run dev           # API on :4000, web on http://localhost:5173
 
 Production runs on Vercel as two services (see `vercel.json`): `client` (Vite static build) and `server` (Express function), with `/api/*` routed to the server and everything else to the client. Deploy with `vercel --prod`; run both locally the same way with `vercel dev`. Vite inlines the `VITE_*` vars at build time.
 
-Videos and avatars upload from the browser straight to [Upstash Blob](https://upstash.com/docs/blob); the API only signs uploads (`/api/uploads`) and stores the resulting URLs. Create a **public** bucket in the Upstash console and set `UPSTASH_BLOB_TOKEN` in `server/.env` and in the Vercel project's environment variables.
+Videos and avatars upload from the browser straight to [Cloudflare R2](https://developers.cloudflare.com/r2/); the API only signs uploads (`/api/uploads`, presigned PUT URLs) and stores the resulting public URLs. Create a bucket, enable public access (r2.dev subdomain or a custom domain), create an R2 API token with Object Read & Write, set the `R2_*` vars in `server/.env` and in the Vercel project, then run `npm --prefix server run setup-storage -- <site origins>` once to allow browser uploads (CORS).
 
 | Server env var          | Purpose                                              |
 | ----------------------- | ---------------------------------------------------- |
@@ -33,7 +33,7 @@ Videos and avatars upload from the browser straight to [Upstash Blob](https://up
 | `CLERK_PUBLISHABLE_KEY` | **Required.** Clerk publishable key (`pk_…`)          |
 | `CLERK_SECRET_KEY`      | **Required.** Clerk secret key (`sk_…`)               |
 | `PORT`                  | API port (default `4000`)                             |
-| `UPSTASH_BLOB_TOKEN`    | **Required for uploads.** Token of a public Upstash Blob bucket |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | **Required for uploads.** Cloudflare R2 bucket and its public URL |
 | `UPLOAD_DIR`            | Legacy local files served at `/uploads` (`server/uploads`) |
 | `CLIENT_ORIGIN`         | CORS origin (`http://localhost:5173`)                 |
 

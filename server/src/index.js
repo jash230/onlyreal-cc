@@ -19,8 +19,6 @@ const app = express();
 
 app.set('trust proxy', 1);
 app.use(cors({ origin: config.clientOrigin }));
-// Upload signing reads its own raw body, so it goes before the JSON parser.
-app.use('/api/uploads', clerk, uploadRoutes);
 app.use(express.json({ limit: '100kb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
 
@@ -28,6 +26,7 @@ app.use('/api', clerk);
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.post(
   '/api/feedback',

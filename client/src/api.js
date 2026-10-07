@@ -1,5 +1,3 @@
-import { upload } from '@upstash/blob/browser';
-
 // Set by AuthProvider: returns a Clerk session token, or null when signed out.
 let tokenGetter = null;
 
@@ -37,22 +35,24 @@ export async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
-// Uploads straight to Upstash Blob (API functions can't take large bodies); the API only signs the upload.
-// kind is 'videos' or 'avatars'. Resolves to the file's public URL to hand back to the API.
+// Uploads straight to Cloudflare R2 (API functions can't take large bodies): the API signs a PUT URL,
+// the browser sends the file there. kind is 'videos' or 'avatars'. Resolves to the file's public URL.
 export async function uploadFile(kind, file, onProgress) {
-  const task = upload(file, {
-    route: `/api/uploads?route=${kind}`,
-    headers: async () => {
-      const token = await getToken();
-      return token ? { Authorization: `Bearer ${token}` } : {};
-    },
+  const { uploadUrl, url, contentType } = await api('/uploads', {
+    method: 'POST',
+    body: { kind, name: file.name, type: file.type, size: file.size },
   });
-  const stop = onProgress && task.subscribe(() => onProgress(task.snapshot().percent / 100));
-  try {
-    return (await task.done).url;
-  } finally {
-    stop?.();
-  }
+  await new Promise((resolve, reject) => {
+    // XHR, not fetch: fetch can't report upload progress.
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', contentType);
+    if (onProgress) xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Upload failed, try again')));
+    xhr.onerror = () => reject(new Error('Upload failed, check your connection'));
+    xhr.send(file);
+  });
+  return url;
 }
 
 // SQLite returns "YYYY-MM-DD HH:MM:SS" in UTC with no zone marker.

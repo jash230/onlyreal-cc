@@ -1,16 +1,16 @@
 // Imports the site owner's own clips from a folder: creates placeholder creators (no Clerk login),
-// uploads each clip to Upstash Blob and spreads them across those creators. Clips browsers can't
+// uploads each clip to Cloudflare R2 and spreads them across those creators. Clips browsers can't
 // play reliably (HEVC, or moov atom after the media) are re-encoded to H.264 + faststart first.
-// Safe to re-run: clips already in Upstash are skipped, and clips imported earlier to another store
+// Safe to re-run: clips already in R2 are skipped, and clips imported earlier to another store
 // (Vercel Blob) are re-uploaded and repointed, keeping their likes and views.
-// Needs ffmpeg and UPSTASH_BLOB_TOKEN.
+// Needs ffmpeg and the R2_* env vars.
 // Run: npm --prefix server run import-videos -- ../videos
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import mongoose from 'mongoose';
-import { getBucket } from './blob.js';
+import { putFile, isStoredUrl } from './blob.js';
 import { config } from './config.js';
 import { User, Video, Like, Follow, ConsentAttestation } from './models.js';
 
@@ -36,7 +36,6 @@ const CONCURRENCY = 3;
 const H264_SUFFIX = '-h264.mp4';
 
 const dir = path.resolve(process.argv[2] || path.join(process.cwd(), '..', 'videos'));
-const bucket = getBucket();
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'onlyreal-import-'));
 const files = fs.readdirSync(dir).filter((f) => /\.(mp4|webm|mov)$/i.test(f)).sort();
 if (!files.length) throw new Error(`No videos in ${dir}`);
@@ -79,7 +78,6 @@ const original = (f) => path.basename(f).replace(new RegExp(`${H264_SUFFIX}$`), 
 const existing = new Map(
   (await Video.find({ filename: { $regex: '^videos/' } }, 'filename url user').lean()).map((v) => [original(v.filename), v])
 );
-const inBucket = (url) => /\.blob\.upstash\.io$/.test(new URL(url).hostname);
 
 const probe = (file, args) => execFileSync('ffprobe', ['-v', 'error', ...args, file], { encoding: 'utf8' }).trim();
 
@@ -107,7 +105,7 @@ function transcode(src, out) {
   ]);
 }
 
-// Uploads the browser-safe version of a clip; returns its { path, url }.
+// Uploads the browser-safe version of a clip; returns its { key, url }.
 async function upload(file, owner) {
   let src = path.join(dir, file);
   let name = file;
@@ -118,8 +116,7 @@ async function upload(file, owner) {
     transcode(src, (src = path.join(tmp, name)));
   }
   try {
-    const body = await fs.openAsBlob(src, { type: contentType });
-    return await bucket.put(`videos/${owner}/${name}`, body, { contentType, multipart: '32mb' });
+    return await putFile(`videos/${owner}/${name}`, fs.createReadStream(src), contentType, fs.statSync(src).size);
   } finally {
     if (src.startsWith(tmp)) fs.rmSync(src, { force: true });
   }
@@ -127,19 +124,19 @@ async function upload(file, owner) {
 
 async function importOne({ file, user }) {
   const prior = existing.get(file);
-  if (prior?.url && inBucket(prior.url)) return skipped++;
+  if (prior?.url && isStoredUrl(prior.url)) return skipped++;
   const n = done + moved + skipped + failed + 1;
   if (prior) {
     // Imported earlier to another store: same record, same creator, new file location.
     const blob = await upload(file, prior.user);
-    await Video.updateOne({ _id: prior._id }, { $set: { filename: blob.path, url: blob.url } });
+    await Video.updateOne({ _id: prior._id }, { $set: { filename: blob.key, url: blob.url } });
     moved++;
-    return console.log(`[${n}/${files.length}] ${file} → moved to Upstash`);
+    return console.log(`[${n}/${files.length}] ${file} → moved to R2`);
   }
   const blob = await upload(file, user._id);
   const video = await Video.create({
     user: user._id,
-    filename: blob.path,
+    filename: blob.key,
     url: blob.url,
     caption: pick(CAPTIONS),
     views: Math.floor(Math.random() * 20000),
@@ -178,5 +175,5 @@ for (const a of users) {
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log(`Done: ${done} imported, ${moved} moved to Upstash, ${skipped} already there, ${failed} failed.`);
+console.log(`Done: ${done} imported, ${moved} moved to R2, ${skipped} already there, ${failed} failed.`);
 await mongoose.disconnect();
