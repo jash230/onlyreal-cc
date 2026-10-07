@@ -672,3 +672,6 @@ p { margin: 0; }
 @media (hover: none) {
   .tile:hover video, .creator-card:hover { transform: none; }
 }
+
+.legal-standalone { padding: 16px; }
+.legal-back { display: inline-flex; margin: 0 0 8px; }

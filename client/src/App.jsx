@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import AgeGate, { hasPassedAgeGate } from './components/AgeGate.jsx';
 import Nav from './components/Nav.jsx';
 import LoginPrompt from './components/LoginPrompt.jsx';
@@ -20,8 +20,21 @@ export default function App() {
   const { authPrompt, needsOnboarding, loading } = useAuth();
   const { pathname } = useLocation();
 
-  // Legal pages stay readable before entering, since the gate links to them.
-  if (!ageOk && !pathname.startsWith('/legal/')) return <AgeGate onPass={() => setAgeOk(true)} />;
+  if (!ageOk) {
+    // Legal pages stay readable before entering (the gate links to them), but standalone: no nav,
+    // modals or other routes, so they can't be used as a side door into the app.
+    if (!pathname.startsWith('/legal/')) return <AgeGate onPass={() => setAgeOk(true)} />;
+    return (
+      <main className="main legal-standalone">
+        <Link to="/" className="btn btn-glass legal-back">
+          ← Back
+        </Link>
+        <Routes>
+          <Route path="/legal/:doc" element={<Legal />} />
+        </Routes>
+      </main>
+    );
+  }
 
   return (
     <div className="app">
