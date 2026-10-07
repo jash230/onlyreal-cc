@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const { openSignIn, openSignUp, signOut } = useClerk();
   const isAuthenticated = !!isSignedIn;
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false); // UI hint only; the server re-checks on every delete
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   // From /auth/me during onboarding: { ageVerified, underage } when the sign-in provider supplied a birthday.
   const [providerAge, setProviderAge] = useState({ ageVerified: false, underage: false });
@@ -24,6 +25,7 @@ export function AuthProvider({ children }) {
     if (!isLoaded) return;
     if (!isAuthenticated) {
       setUser(null);
+      setIsAdmin(false);
       setNeedsOnboarding(false);
       setProfileLoading(false);
       return;
@@ -32,6 +34,7 @@ export function AuthProvider({ children }) {
     api('/auth/me')
       .then((d) => {
         setUser(d.user);
+        setIsAdmin(!!d.isAdmin);
         setNeedsOnboarding(d.needsOnboarding);
         setProviderAge({ ageVerified: !!d.ageVerified, underage: !!d.underage });
       })
@@ -68,6 +71,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         setUser,
+        isAdmin,
         clerkUser,
         loading: !isLoaded || profileLoading,
         isAuthenticated,

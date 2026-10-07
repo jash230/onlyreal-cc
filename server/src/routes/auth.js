@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { User } from '../models.js';
-import { requireLogin, ageFromBirthDate } from '../auth.js';
+import { requireLogin, ageFromBirthDate, isAdmin } from '../auth.js';
 import { publicUser } from '../serializers.js';
 import { googleBirthDate } from '../googleAge.js';
 import { ah, isDuplicateKey } from '../util.js';
@@ -24,7 +24,7 @@ router.get(
         underage: age < 18,
       });
     }
-    res.json({ user: await publicUser(req.user, req.user), needsOnboarding: false });
+    res.json({ user: await publicUser(req.user, req.user), needsOnboarding: false, isAdmin: isAdmin(req) });
   })
 );
 

@@ -17,5 +17,7 @@ export const config = {
       secretKey: required('CLERK_SECRET_KEY'),
     };
   },
+  // Clerk user ids (user_…) allowed to delete any clip from the site. Comma-separated.
+  adminClerkIds: new Set((process.env.ADMIN_CLERK_IDS || '').split(',').map((s) => s.trim()).filter(Boolean)),
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
 };

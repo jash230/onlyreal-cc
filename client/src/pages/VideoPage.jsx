@@ -3,10 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ReelFeed from '../components/ReelFeed.jsx';
 import { BackIcon, TrashIcon } from '../components/Icons.jsx';
 import { api } from '../api.js';
+import { useAuth } from '../AuthContext.jsx';
 
 export default function VideoPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [video, setVideo] = useState(null);
   const [error, setError] = useState('');
 
@@ -22,7 +24,7 @@ export default function VideoPage() {
   const remove = async () => {
     if (!confirm('Delete this clip? This cannot be undone.')) return;
     await api(`/videos/${id}`, { method: 'DELETE' });
-    navigate('/me');
+    navigate(video.author.isMe ? '/me' : '/');
   };
 
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate('/'));
@@ -54,7 +56,7 @@ export default function VideoPage() {
         <button className="icon-btn glass" onClick={back} aria-label="Back">
           <BackIcon />
         </button>
-        {video.author.isMe && (
+        {(video.author.isMe || isAdmin) && (
           <button className="btn btn-glass" onClick={remove}>
             <TrashIcon width={18} height={18} /> Delete
           </button>

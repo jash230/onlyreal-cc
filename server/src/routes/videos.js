@@ -4,7 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { del } from '@vercel/blob';
 import { Video, Like, Follow, Comment, ConsentAttestation, Report, User } from '../models.js';
-import { requireUser, optionalUser } from '../auth.js';
+import { requireUser, optionalUser, isAdmin } from '../auth.js';
 import { videoDto, videoDtos, authorDto } from '../serializers.js';
 import { UPLOAD_DIR } from '../paths.js';
 import { ah, isId, isDuplicateKey } from '../util.js';
@@ -147,7 +147,7 @@ router.delete(
   ah(async (req, res) => {
     const video = await Video.findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
-    if (!video.user.equals(req.user._id)) return res.status(403).json({ error: 'Not your video' });
+    if (!video.user.equals(req.user._id) && !isAdmin(req)) return res.status(403).json({ error: 'Not your video' });
     await Promise.all([
       Video.deleteOne({ _id: video._id }),
       Like.deleteMany({ video: video._id }),

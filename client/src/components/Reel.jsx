@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import Avatar from './Avatar.jsx';
 import CommentsSheet from './CommentsSheet.jsx';
 import ReportModal from './ReportModal.jsx';
-import { LipsIcon, CommentIcon, ShareIcon, FlagIcon, MuteIcon, PlayIcon } from './Icons.jsx';
+import { LipsIcon, CommentIcon, ShareIcon, FlagIcon, MuteIcon, PlayIcon, TrashIcon } from './Icons.jsx';
 import { api, compact, timeAgo } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 
 const DOUBLE_TAP_MS = 240;
 
 function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFollow, onRemoved }) {
-  const { requireUser } = useAuth();
+  const { requireUser, isAdmin } = useAuth();
   const videoRef = useRef(null);
   const barRef = useRef(null);
   const tapTimer = useRef(0);
@@ -142,6 +142,16 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
     setTimeout(() => setToast(''), 2200);
   };
 
+  const remove = async () => {
+    if (!confirm(`Delete this clip by @${video.author.username}? This cannot be undone.`)) return;
+    try {
+      await api(`/videos/${video.id}`, { method: 'DELETE' });
+      onRemoved?.(video.id);
+    } catch (e) {
+      flash(e.message);
+    }
+  };
+
   const { author } = video;
 
   return (
@@ -250,6 +260,13 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
           </span>
           <span className="action-count">Share</span>
         </button>
+        {(isAdmin || author.isMe) && (
+          <button className="action action-quiet" onClick={remove} aria-label="Delete clip">
+            <span className="action-icon">
+              <TrashIcon />
+            </span>
+          </button>
+        )}
         {!author.isMe && (
           <button className="action action-quiet" onClick={() => setPanel('report')} aria-label="Report">
             <span className="action-icon">

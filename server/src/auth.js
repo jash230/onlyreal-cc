@@ -1,5 +1,6 @@
 import { clerkMiddleware, getAuth } from '@clerk/express';
 import { User } from './models.js';
+import { config } from './config.js';
 
 // Verifies the Clerk session token (Authorization: Bearer) on API requests. Mounted on /api in index.js.
 export const clerk = clerkMiddleware();
@@ -26,6 +27,9 @@ export const requireUser = wrap((req, res, next) => {
 });
 
 export const optionalUser = wrap((_req, _res, next) => next());
+
+// Site owner(s), from ADMIN_CLERK_IDS. Checked against the verified Clerk session, never client input.
+export const isAdmin = (req) => !!req.clerkId && config.adminClerkIds.has(req.clerkId);
 
 export function ageFromBirthDate(birthDate, now = new Date()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return NaN;
