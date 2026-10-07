@@ -1,4 +1,4 @@
-import { upload } from '@vercel/blob/client';
+import { upload } from '@upstash/blob/browser';
 
 // Set by AuthProvider: returns a Clerk session token, or null when signed out.
 let tokenGetter = null;
@@ -37,18 +37,22 @@ export async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
-// Uploads straight to Vercel Blob (API functions can't take large bodies); the API only signs the upload.
-// kind is 'videos' or 'avatars'. Resolves to the blob URL to hand back to the API.
-export async function uploadFile(kind, userId, file, onProgress) {
-  const token = await getToken();
-  const blob = await upload(`${kind}/${userId}/${file.name}`, file, {
-    access: 'public',
-    handleUploadUrl: '/api/uploads',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    multipart: file.size > 50 * 1024 * 1024,
-    onUploadProgress: onProgress && ((e) => onProgress(e.percentage / 100)),
+// Uploads straight to Upstash Blob (API functions can't take large bodies); the API only signs the upload.
+// kind is 'videos' or 'avatars'. Resolves to the file's public URL to hand back to the API.
+export async function uploadFile(kind, file, onProgress) {
+  const task = upload(file, {
+    route: `/api/uploads?route=${kind}`,
+    headers: async () => {
+      const token = await getToken();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
   });
-  return blob.url;
+  const stop = onProgress && task.subscribe(() => onProgress(task.snapshot().percent / 100));
+  try {
+    return (await task.done).url;
+  } finally {
+    stop?.();
+  }
 }
 
 // SQLite returns "YYYY-MM-DD HH:MM:SS" in UTC with no zone marker.

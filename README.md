@@ -25,7 +25,7 @@ npm run dev           # API on :4000, web on http://localhost:5173
 
 Production runs on Vercel as two services (see `vercel.json`): `client` (Vite static build) and `server` (Express function), with `/api/*` routed to the server and everything else to the client. Deploy with `vercel --prod`; run both locally the same way with `vercel dev`. Vite inlines the `VITE_*` vars at build time.
 
-Videos and avatars upload from the browser straight to Vercel Blob; the API only signs uploads (`/api/uploads`) and stores the resulting URLs. Pull `BLOB_READ_WRITE_TOKEN` into `server/.env` with `vercel env pull` for local uploads.
+Videos and avatars upload from the browser straight to [Upstash Blob](https://upstash.com/docs/blob); the API only signs uploads (`/api/uploads`) and stores the resulting URLs. Create a **public** bucket in the Upstash console and set `UPSTASH_BLOB_TOKEN` in `server/.env` and in the Vercel project's environment variables.
 
 | Server env var          | Purpose                                              |
 | ----------------------- | ---------------------------------------------------- |
@@ -33,7 +33,7 @@ Videos and avatars upload from the browser straight to Vercel Blob; the API only
 | `CLERK_PUBLISHABLE_KEY` | **Required.** Clerk publishable key (`pk_…`)          |
 | `CLERK_SECRET_KEY`      | **Required.** Clerk secret key (`sk_…`)               |
 | `PORT`                  | API port (default `4000`)                             |
-| `BLOB_READ_WRITE_TOKEN` | **Required for uploads.** Set by Vercel when a Blob store is connected |
+| `UPSTASH_BLOB_TOKEN`    | **Required for uploads.** Token of a public Upstash Blob bucket |
 | `UPLOAD_DIR`            | Legacy local files served at `/uploads` (`server/uploads`) |
 | `CLIENT_ORIGIN`         | CORS origin (`http://localhost:5173`)                 |
 

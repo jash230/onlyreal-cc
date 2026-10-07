@@ -54,7 +54,7 @@ export default function Upload() {
     setError('');
     try {
       setProgress(0);
-      const url = await uploadFile('videos', user.id, file, setProgress);
+      const url = await uploadFile('videos', file, setProgress);
       const { video } = await api('/videos', { method: 'POST', body: { url, caption, attestAge, attestConsent } });
       navigate(`/v/${video.id}`);
     } catch (err) {

@@ -2,13 +2,13 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
-import { del } from '@vercel/blob';
 import { Video, Like, Follow, Comment, ConsentAttestation, Report, User } from '../models.js';
 import { requireUser, optionalUser, isAdmin } from '../auth.js';
 import { videoDto, videoDtos, authorDto } from '../serializers.js';
 import { UPLOAD_DIR } from '../paths.js';
 import { ah, isId, isDuplicateKey } from '../util.js';
 import { verifyUpload } from './uploads.js';
+import { deleteStored } from '../blob.js';
 
 const router = Router();
 const PAGE_SIZE = 10;
@@ -132,7 +132,7 @@ router.post(
     } catch (e) {
       // No multi-document transactions on standalone Mongo: undo by hand.
       if (video) await Video.deleteOne({ _id: video._id }).catch(() => {});
-      await del(blob.url).catch(() => {});
+      await deleteStored(blob.pathname);
       throw e;
     }
 
@@ -153,7 +153,7 @@ router.delete(
       Like.deleteMany({ video: video._id }),
       Comment.deleteMany({ video: video._id }),
     ]);
-    if (video.url) await del(video.url).catch(() => {});
+    if (video.url) await deleteStored(video.filename);
     else fs.unlink(path.join(UPLOAD_DIR, video.filename), () => {});
     res.status(204).end();
   })

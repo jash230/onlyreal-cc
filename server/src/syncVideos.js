@@ -5,7 +5,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import mongoose from 'mongoose';
-import { del } from '@vercel/blob';
+import { BlobError } from '@upstash/blob';
+import { getBucket } from './blob.js';
 import { config } from './config.js';
 import { Video, Like, Comment } from './models.js';
 
@@ -32,21 +33,19 @@ if (!apply) {
     Like.deleteMany({ video: { $in: ids } }),
     Comment.deleteMany({ video: { $in: ids } }),
   ]);
-  const failed = [];
-  const urls = gone.map((v) => v.url).filter(Boolean);
-  for (let i = 0; i < urls.length; i += 100) {
-    const batch = urls.slice(i, i + 100);
-    await del(batch).catch((e) => {
-      failed.push(...batch);
-      console.error(`blob delete failed: ${e.message}`);
-    });
+  let failed = [];
+  try {
+    if (gone.length) await getBucket().del(gone.map((v) => v.filename));
+  } catch (e) {
+    failed = BlobError.is(e) && e.code === 'partial_delete' ? e.failed ?? [] : gone.map((v) => v.filename);
+    console.error(`blob delete failed: ${e.message}`);
   }
   console.log(`Deleted ${videos.deletedCount} clips, ${likes.deletedCount} likes, ${comments.deletedCount} comments`);
   if (failed.length) {
-    // The records are gone, so a re-run won't find these again; keep the URLs for a later cleanup.
+    // The records are gone, so a re-run won't find these again; keep the paths for a later cleanup.
     const out = path.resolve('blob-delete-failed.json');
     fs.writeFileSync(out, JSON.stringify(failed, null, 2));
-    console.log(`${failed.length} blobs could not be deleted; URLs saved to ${out}`);
+    console.log(`${failed.length} files could not be deleted; paths saved to ${out}`);
   } else console.log('Blobs removed.');
 }
 

@@ -150,7 +150,7 @@ function EditProfile({ profile, onClose, onSaved }) {
     setBusy(true);
     setError('');
     try {
-      const avatarUrl = avatar ? await uploadFile('avatars', profile.id, avatar) : undefined;
+      const avatarUrl = avatar ? await uploadFile('avatars', avatar) : undefined;
       const { user } = await api('/users/me', { method: 'PATCH', body: { displayName, bio, avatarUrl } });
       onSaved(user);
     } catch (err) {
