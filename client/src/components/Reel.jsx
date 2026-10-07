@@ -17,6 +17,7 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
   const viewed = useRef(false);
   const [paused, setPaused] = useState(false);
   const [buffering, setBuffering] = useState(false);
+  const [contain, setContain] = useState(false); // fit the whole clip instead of cropping to fill
   const [liked, setLiked] = useState(video.liked);
   const [likeCount, setLikeCount] = useState(video.likeCount);
   const [commentCount, setCommentCount] = useState(video.commentCount);
@@ -166,6 +167,13 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
               playsInline
               muted={muted}
               preload={preload}
+              className={contain ? 'is-contain' : undefined}
+              onLoadedMetadata={(e) => {
+                // Crop to fill only portrait clips; wider than 3:4 (landscape, square) would lose most
+                // of the picture and be zoomed ~3x in the tall frame, so show those whole.
+                const v = e.currentTarget;
+                if (v.videoWidth) setContain(v.videoWidth / v.videoHeight > 0.75);
+              }}
               onWaiting={() => active && setBuffering(true)}
               onPlaying={() => setBuffering(false)}
             />

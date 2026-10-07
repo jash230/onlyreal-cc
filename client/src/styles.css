@@ -238,6 +238,7 @@ p { margin: 0; }
 }
 .reel-stage { position: absolute; inset: 0; cursor: pointer; }
 .reel-stage video { width: 100%; height: 100%; object-fit: cover; }
+.reel-stage video.is-contain { object-fit: contain; }
 .reel-placeholder {
   position: absolute; inset: 0;
   background: radial-gradient(120% 80% at 50% 30%, var(--oxblood), var(--velvet));
