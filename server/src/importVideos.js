@@ -65,9 +65,14 @@ let skipped = 0;
 let failed = 0;
 const queue = files.map((file, i) => ({ file, user: users[i % users.length] }));
 
+// Matched by filename alone (any creator, original or -h264 copy): which creator a file is dealt
+// to shifts whenever the folder changes, so the full pathname can't identify an earlier import.
+const base = (f) => path.basename(f).replace(/-h264\.mp4$/, path.extname(f) === '.mp4' ? '.mp4' : '$&');
+const imported = new Set((await Video.find({ filename: { $regex: '^videos/' } }, 'filename').lean()).map((v) => base(v.filename)));
+
 async function importOne({ file, user }) {
   const pathname = `videos/${user._id}/${file}`;
-  if (await Video.exists({ filename: pathname })) return skipped++;
+  if (imported.has(file)) return skipped++;
   const contentType = file.endsWith('.webm') ? 'video/webm' : file.endsWith('.mov') ? 'video/quicktime' : 'video/mp4';
   const blob = await put(pathname, fs.createReadStream(path.join(dir, file)), {
     access: 'public',
