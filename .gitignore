@@ -1,0 +1,14 @@
+node_modules
+server/uploads/*
+!server/uploads/.gitkeep
+client/dist
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+.mcp.json
+.auth0-mcp-state.json
+.auth0-mcp-writes.log
+
+.DS_Store

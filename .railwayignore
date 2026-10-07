@@ -1,0 +1,12 @@
+# Never upload secrets or local state to Railway builds.
+.env
+**/.env
+**/.env.*
+!**/.env.example
+.mcp.json
+**/.auth0-mcp-*
+node_modules
+**/node_modules
+client/dist
+server/uploads/*
+favicon.png
