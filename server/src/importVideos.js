@@ -12,6 +12,7 @@ import path from 'node:path';
 import mongoose from 'mongoose';
 import { putFile, isStoredUrl } from './blob.js';
 import { config } from './config.js';
+import { captionPicker, clipStats, creatorFollowers } from './seedStats.js';
 import { User, Video, Like, Follow, ConsentAttestation } from './models.js';
 
 const CREATORS = [
@@ -28,10 +29,6 @@ const CREATORS = [
   { username: 'lexi.k', display: 'Lexi', bio: 'Your new favorite.' },
   { username: 'sky.blue', display: 'Sky', bio: 'Golden hour enjoyer.' },
 ];
-const CAPTIONS = [
-  'new one 🔥', 'golden hour', 'what do you think?', 'late night', 'couldn’t wait to post this',
-  'part 2 soon', 'felt cute', 'rate it 1-10', 'just for you', 'weekend mood', '', 'more coming 👀',
-];
 const CONCURRENCY = 3;
 const H264_SUFFIX = '-h264.mp4';
 
@@ -40,7 +37,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'onlyreal-import-'));
 const files = fs.readdirSync(dir).filter((f) => /\.(mp4|webm|mov)$/i.test(f)).sort();
 if (!files.length) throw new Error(`No videos in ${dir}`);
 
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const nextCaption = captionPicker();
 
 await mongoose.connect(config.mongoUri);
 
@@ -58,6 +55,7 @@ for (const c of CREATORS) {
         bio: c.bio,
         birthDate: '1998-03-21',
         termsAcceptedAt: new Date(),
+        followerCount: creatorFollowers(),
       },
     },
     { upsert: true, new: true }
@@ -133,13 +131,14 @@ async function importOne({ file, user }) {
     return console.log(`[${n}/${files.length}] ${file} → moved to R2`);
   }
   const blob = await upload(file, user._id);
+  const createdAt = new Date(Date.now() - Math.random() * 30 * 864e5);
   const video = await Video.create({
     user: user._id,
     filename: blob.key,
     url: blob.url,
-    caption: pick(CAPTIONS),
-    views: Math.floor(Math.random() * 20000),
-    createdAt: new Date(Date.now() - Math.random() * 30 * 864e5),
+    caption: nextCaption(),
+    ...clipStats(user.followerCount, createdAt),
+    createdAt,
   });
   // Attested by the site owner at import time, not by the placeholder account.
   await ConsentAttestation.create({ video: video._id, user: user._id, ip: 'owner-import', filename: video.filename });
