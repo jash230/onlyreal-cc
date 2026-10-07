@@ -14,9 +14,10 @@ export default function Feed() {
 
   return (
     <div className="feed-page">
-      <div className="feed-tabs glass" role="tablist" style={{ '--tab': following ? 1 : 0 }}>
+      <h1 className="sr-only">{following ? 'Following feed' : 'For You feed'}</h1>
+      <div className="feed-tabs glass" role="group" aria-label="Feed" style={{ '--tab': following ? 1 : 0 }}>
         {TABS.map(([key, label]) => (
-          <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
+          <button key={key} aria-pressed={tab === key} onClick={() => setTab(key)}>
             {label}
           </button>
         ))}

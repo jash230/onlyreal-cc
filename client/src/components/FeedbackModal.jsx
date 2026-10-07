@@ -35,7 +35,7 @@ export default function FeedbackModal({ onClose }) {
             What's working, what isn't?
             <textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} required />
           </label>
-          {error && <p className="error">{error}</p>}
+          {error && <p className="error" role="alert">{error}</p>}
           <button className="btn btn-primary" disabled={state === 'sending'}>
             {state === 'sending' ? 'Sending…' : 'Send'}
           </button>

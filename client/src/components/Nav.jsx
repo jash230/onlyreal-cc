@@ -71,7 +71,7 @@ export default function Nav({ onFeedback }) {
         <button
           className="dock-item"
           aria-expanded={moreOpen}
-          aria-haspopup="menu"
+          aria-controls="more-links"
           onClick={() => setMoreOpen((o) => !o)}
         >
           <span className="dock-icon">
@@ -80,13 +80,13 @@ export default function Nav({ onFeedback }) {
           <span>More</span>
         </button>
         {moreOpen && (
-          <div className="popover glass" role="menu">
-            <button role="menuitem" onClick={() => (setMoreOpen(false), onFeedback())}>
+          <div className="popover glass" id="more-links">
+            <button onClick={() => (setMoreOpen(false), onFeedback())}>
               Share feedback
             </button>
-            <Link role="menuitem" to="/legal/guidelines">Community guidelines</Link>
-            <Link role="menuitem" to="/legal/terms">Terms of service</Link>
-            <Link role="menuitem" to="/legal/2257">18 U.S.C. 2257</Link>
+            <Link to="/legal/guidelines">Community guidelines</Link>
+            <Link to="/legal/terms">Terms of service</Link>
+            <Link to="/legal/2257">18 U.S.C. 2257</Link>
           </div>
         )}
       </div>

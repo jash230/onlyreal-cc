@@ -182,8 +182,23 @@ export default function ReelFeed({ endpoint, empty, initial }) {
 
   const onRemoved = useCallback((id) => setVideos((vs) => vs.filter((v) => v.id !== id)), []);
 
+  const videosRef = useRef(videos);
+  videosRef.current = videos;
+  const onFocusReel = useCallback((id) => {
+    const i = videosRef.current.findIndex((v) => v.id === id);
+    if (i >= 0) goTo(i);
+  }, [goTo]);
+
+  const current = videos[active];
+
   return (
     <div className="reel-feed" ref={containerRef}>
+      {/* Screen readers hear which clip is now playing as the feed moves. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {current
+          ? `Clip ${active + 1}: ${current.caption ? `${current.caption}, ` : ''}by ${current.author.displayName}. Up and down arrows change clips, K pauses, M mutes.`
+          : ''}
+      </p>
       {videos.map((v, i) => (
         <Reel
           key={v.id}
@@ -195,6 +210,7 @@ export default function ReelFeed({ endpoint, empty, initial }) {
           onToggleMute={toggleMute}
           onAuthorFollow={onAuthorFollow}
           onRemoved={onRemoved}
+          onFocusReel={onFocusReel}
         />
       ))}
       {videos.length === 0 &&

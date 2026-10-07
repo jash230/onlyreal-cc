@@ -43,7 +43,8 @@ export default function CommentsSheet({ videoId, onClose, onCount }) {
         {comments?.length === 0 && <li className="muted">No comments yet. Start the conversation.</li>}
         {comments?.map((c) => (
           <li key={c.id} className="comment">
-            <Link to={`/u/${c.author.username}`} onClick={onClose}>
+            {/* Same destination as the name link below; hidden from keyboard and screen readers. */}
+            <Link to={`/u/${c.author.username}`} onClick={onClose} tabIndex={-1} aria-hidden="true">
               <Avatar user={c.author} size={32} />
             </Link>
             <div>
@@ -58,9 +59,10 @@ export default function CommentsSheet({ videoId, onClose, onCount }) {
           </li>
         ))}
       </ul>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       <form className="comment-form" onSubmit={submit}>
         <input
+          aria-label="Add a comment"
           placeholder={user ? 'Add a comment…' : 'Sign up to comment'}
           value={body}
           onChange={(e) => setBody(e.target.value)}

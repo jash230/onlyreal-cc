@@ -84,7 +84,7 @@ export default function OnboardingModal() {
                 <Link to="/legal/guidelines" target="_blank">Community Guidelines</Link>
               </span>
             </label>
-            {error && <p className="error">{error}</p>}
+            {error && <p className="error" role="alert">{error}</p>}
             <button className="btn btn-primary btn-lg" disabled={busy}>
               {busy ? 'Please wait…' : 'Continue'}
             </button>

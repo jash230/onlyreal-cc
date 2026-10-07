@@ -74,6 +74,17 @@ export default function Upload() {
         <div
           className={`dropzone${file ? ' has-file' : ''}`}
           onClick={() => !uploading && inputRef.current.click()}
+          // Keyboard users choose a file the same way; the real file input is hidden.
+          role="button"
+          tabIndex={uploading ? -1 : 0}
+          aria-label={file ? `Selected video: ${file.name}. Press Enter to choose a different one.` : 'Choose a video to upload'}
+          aria-disabled={uploading || undefined}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !uploading) {
+              e.preventDefault();
+              inputRef.current.click();
+            }
+          }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -128,9 +139,16 @@ export default function Upload() {
             </label>
           </fieldset>
 
-          {error && <p className="error">{error}</p>}
+          {error && <p className="error" role="alert">{error}</p>}
           {uploading && (
-            <div className="progress">
+            <div
+              className="progress"
+              role="progressbar"
+              aria-label="Upload progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progress * 100)}
+            >
               <div style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
           )}

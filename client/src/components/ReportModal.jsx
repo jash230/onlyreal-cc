@@ -56,7 +56,7 @@ export default function ReportModal({ videoId, onClose, onReported }) {
             Details (optional)
             <textarea rows={3} value={details} onChange={(e) => setDetails(e.target.value)} maxLength={1000} />
           </label>
-          {error && <p className="error">{error}</p>}
+          {error && <p className="error" role="alert">{error}</p>}
           <button className="btn btn-danger" disabled={!reason || busy}>
             {busy ? 'Sending…' : 'Submit report'}
           </button>

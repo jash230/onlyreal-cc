@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom';
 import Avatar from './Avatar.jsx';
 import CommentsSheet from './CommentsSheet.jsx';
 import ReportModal from './ReportModal.jsx';
-import { LipsIcon, CommentIcon, ShareIcon, FlagIcon, MuteIcon, PlayIcon, TrashIcon } from './Icons.jsx';
+import { LipsIcon, CommentIcon, ShareIcon, FlagIcon, MuteIcon, PlayIcon, PauseIcon, TrashIcon } from './Icons.jsx';
 import { api, compact, timeAgo } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 
 const DOUBLE_TAP_MS = 240;
 
-function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFollow, onRemoved }) {
+const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFollow, onRemoved, onFocusReel }) {
   const { requireUser, isAdmin } = useAuth();
   const videoRef = useRef(null);
   const barRef = useRef(null);
@@ -51,7 +53,15 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
     let frame;
     const tick = () => {
       const el = videoRef.current;
-      if (el && barRef.current && el.duration) barRef.current.style.transform = `scaleX(${el.currentTime / el.duration})`;
+      if (el && barRef.current && el.duration) {
+        barRef.current.style.transform = `scaleX(${el.currentTime / el.duration})`;
+        const slider = barRef.current.parentElement;
+        const now = String(Math.round((el.currentTime / el.duration) * 100));
+        if (slider.getAttribute('aria-valuenow') !== now) {
+          slider.setAttribute('aria-valuenow', now);
+          slider.setAttribute('aria-valuetext', `${clock(el.currentTime)} of ${clock(el.duration)}`);
+        }
+      }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -59,6 +69,21 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
   }, [active]);
 
   useEffect(() => () => clearTimeout(tapTimer.current), []);
+
+  // K or Space plays/pauses the active clip (Space only when no control has focus, so buttons keep it).
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input,textarea,select,[role="dialog"]')) return;
+      const onControl = e.target.closest('button,a,[role="slider"]');
+      if (e.key === 'k' || (e.key === ' ' && !onControl)) {
+        e.preventDefault();
+        togglePlay();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const togglePlay = () => {
     const el = videoRef.current;
@@ -114,6 +139,19 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
     el.currentTime = ((e.clientX - box.left) / box.width) * el.duration;
   };
 
+  // Slider keys: arrows step 5 s, Page keys 15 s, Home/End jump to the ends.
+  const seekKey = (e) => {
+    const el = videoRef.current;
+    if (!el?.duration) return;
+    const step = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5, PageUp: 15, PageDown: -15 }[e.key];
+    if (step !== undefined) el.currentTime = Math.min(el.duration, Math.max(0, el.currentTime + step));
+    else if (e.key === 'Home') el.currentTime = 0;
+    else if (e.key === 'End') el.currentTime = Math.max(0, el.duration - 0.1);
+    else return;
+    e.preventDefault();
+    e.stopPropagation(); // the feed uses Up/Down to change clips
+  };
+
   const follow = async () => {
     if (!requireUser()) return;
     try {
@@ -156,9 +194,15 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
   const { author } = video;
 
   return (
-    <section className={`reel${active ? ' is-active' : ''}`} aria-label={`Clip by @${author.username}`}>
+    <article
+      className={`reel${active ? ' is-active' : ''}`}
+      aria-label={`${video.caption ? `${video.caption}, ` : ''}clip by ${author.displayName} (@${author.username})`}
+      // Tabbing into a clip that isn't on screen scrolls the feed to it.
+      onFocus={() => !active && onFocusReel?.(video.id)}
+    >
       <div className="reel-frame">
-        <div className="reel-stage" onClick={onStageClick}>
+        {/* Pointer shortcut only (tap pauses, double tap likes); the buttons below cover keyboards. */}
+        <div className="reel-stage" onClick={onStageClick} aria-hidden="true">
           {mounted ? (
             <video
               ref={videoRef}
@@ -197,6 +241,14 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
           {buffering && !paused && <span className="reel-buffering" aria-hidden="true" />}
         </div>
 
+        <button
+          className="reel-play glass"
+          onClick={togglePlay}
+          aria-label={paused ? 'Play (K)' : 'Pause (K)'}
+          tabIndex={active ? 0 : -1}
+        >
+          {paused ? <PlayIcon width={18} height={18} /> : <PauseIcon width={18} height={18} />}
+        </button>
         <button className="reel-mute glass" onClick={onToggleMute} aria-label={muted ? 'Unmute (M)' : 'Mute (M)'}>
           <MuteIcon muted={muted} />
         </button>
@@ -228,10 +280,13 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
           className="reel-progress"
           onClick={seek}
           role="slider"
+          onKeyDown={seekKey}
           aria-label="Seek"
           aria-valuemin={0}
           aria-valuemax={100}
-          tabIndex={-1}
+          aria-valuenow={0}
+          aria-valuetext="0:00"
+          tabIndex={active ? 0 : -1}
         >
           <div ref={barRef} />
         </div>
@@ -297,7 +352,7 @@ function Reel({ video, active, mounted, preload, muted, onToggleMute, onAuthorFo
           onReported={(reason) => (reason === 'underage' || reason === 'non_consensual') && onRemoved?.(video.id)}
         />
       )}
-    </section>
+    </article>
   );
 }
 

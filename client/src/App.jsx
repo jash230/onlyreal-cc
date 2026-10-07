@@ -40,8 +40,11 @@ export default function App() {
   return (
     <div className="app">
       <Analytics />
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
       <Nav onFeedback={() => setFeedbackOpen(true)} />
-      <main className="main">
+      <main className="main" id="main" tabIndex={-1}>
         {loading ? (
           <div className="page center">
             <div className="spinner" />

@@ -64,6 +64,12 @@ export const PlayIcon = (p) => (
     <path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l11-6.8a.8.8 0 0 0 0-1.4l-11-6.8A.8.8 0 0 0 8 5.2z" />
   </svg>
 );
+export const PauseIcon = (p) => (
+  <svg {...base} fill="currentColor" stroke="none" {...p}>
+    <rect x="6.5" y="5" width="4" height="14" rx="1" />
+    <rect x="13.5" y="5" width="4" height="14" rx="1" />
+  </svg>
+);
 export const CloseIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M6 6l12 12M18 6 6 18" />

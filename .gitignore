@@ -16,3 +16,4 @@ client/dist
 
 videos/
 server/blob-delete-failed.json
+videos_removed/

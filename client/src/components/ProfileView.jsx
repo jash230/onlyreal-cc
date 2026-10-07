@@ -175,7 +175,7 @@ function EditProfile({ profile, onClose, onSaved }) {
           Bio
           <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)} maxLength={200} />
         </label>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <button className="btn btn-primary" disabled={busy}>
           {busy ? 'Saving…' : 'Save changes'}
         </button>

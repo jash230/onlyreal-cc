@@ -12,3 +12,4 @@ server/uploads/*
 /favicon.png
 
 videos/
+videos_removed/
