@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import AgeGate, { hasPassedAgeGate } from './components/AgeGate.jsx';
 import Nav from './components/Nav.jsx';
 import LoginPrompt from './components/LoginPrompt.jsx';
@@ -38,6 +39,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <Analytics />
       <Nav onFeedback={() => setFeedbackOpen(true)} />
       <main className="main">
         {loading ? (
