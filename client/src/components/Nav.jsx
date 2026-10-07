@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { HomeIcon, CompassIcon, PlusIcon, UserIcon, MoreIcon } from './Icons.jsx';
+import { HomeIcon, SearchIcon, PlusIcon, UserIcon, MoreIcon } from './Icons.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import Avatar from './Avatar.jsx';
 
 // Floating glass dock: a vertical rail on desktop, a bottom dock on phones.
 export default function Nav({ onFeedback }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { pathname } = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef(null);
@@ -35,30 +35,34 @@ export default function Nav({ onFeedback }) {
       <NavLink to="/" end className={item}>
         {({ isActive }) => (
           <>
-            <HomeIcon filled={isActive} />
+            <span className="dock-icon">
+              <HomeIcon filled={isActive} />
+            </span>
             <span>Feed</span>
           </>
         )}
       </NavLink>
-      <NavLink to="/discover" className={item}>
-        {({ isActive }) => (
-          <>
-            <CompassIcon filled={isActive} />
-            <span>Discover</span>
-          </>
-        )}
+      <NavLink to="/search" className={item}>
+        <span className="dock-icon">
+          <SearchIcon />
+        </span>
+        <span>Search</span>
       </NavLink>
       <NavLink to="/upload" className={({ isActive }) => `dock-item dock-upload${isActive ? ' is-active' : ''}`}>
-        <span className="upload-key">
-          <PlusIcon />
+        <span className="dock-icon">
+          <span className="upload-key">
+            <PlusIcon />
+          </span>
         </span>
         <span>Upload</span>
       </NavLink>
       <NavLink to="/me" className={item}>
         {({ isActive }) => (
           <>
-            {user ? <Avatar user={user} size={26} ring={isActive} /> : <UserIcon filled={isActive} />}
-            <span>{isAuthenticated ? 'Me' : 'Log in'}</span>
+            <span className="dock-icon">
+              {user ? <Avatar user={user} size={26} ring={isActive} /> : <UserIcon filled={isActive} />}
+            </span>
+            <span>Account</span>
           </>
         )}
       </NavLink>
@@ -70,7 +74,9 @@ export default function Nav({ onFeedback }) {
           aria-haspopup="menu"
           onClick={() => setMoreOpen((o) => !o)}
         >
-          <MoreIcon />
+          <span className="dock-icon">
+            <MoreIcon />
+          </span>
           <span>More</span>
         </button>
         {moreOpen && (

@@ -1,4 +1,4 @@
-// Creates demo creators (Auth0-less placeholder accounts) and SFW placeholder clips (requires ffmpeg). Run: npm --prefix server run seed
+// Creates demo creators (placeholder accounts with no Clerk login) and SFW placeholder clips (requires ffmpeg). Run: npm --prefix server run seed
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -38,9 +38,9 @@ for (const [n, c] of CREATORS.entries()) {
     users.push(user);
     continue;
   }
-  // "seed|" ids never match a real Auth0 subject, so nobody can log in as these.
+  // "seed|" ids never match a real Clerk user id (user_…), so nobody can log in as these.
   user = await User.create({
-    auth0Id: `seed|${c.username}`,
+    clerkId: `seed|${c.username}`,
     username: c.username,
     usernameLower: c.username,
     displayName: c.display,

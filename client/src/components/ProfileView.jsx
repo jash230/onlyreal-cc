@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Avatar from './Avatar.jsx';
 import VideoGrid from './VideoGrid.jsx';
 import Modal from './Modal.jsx';
-import { api, compact } from '../api.js';
+import { api, compact, uploadFile } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 
 export default function ProfileView({ username }) {
@@ -26,9 +26,9 @@ export default function ProfileView({ username }) {
     return (
       <div className="page center">
         <h1>Profile not found</h1>
-        <p className="muted">No one goes by @{username}. Check the spelling or find creators in Discover.</p>
-        <Link className="btn btn-glass" to="/discover">
-          Go to Discover
+        <p className="muted">No one goes by @{username}. Check the spelling or find creators in Search.</p>
+        <Link className="btn btn-glass" to="/search">
+          Go to Search
         </Link>
       </div>
     );
@@ -149,12 +149,9 @@ function EditProfile({ profile, onClose, onSaved }) {
     e.preventDefault();
     setBusy(true);
     setError('');
-    const form = new FormData();
-    form.append('displayName', displayName);
-    form.append('bio', bio);
-    if (avatar) form.append('avatar', avatar);
     try {
-      const { user } = await api('/users/me', { method: 'PATCH', form });
+      const avatarUrl = avatar ? await uploadFile('avatars', profile.id, avatar) : undefined;
+      const { user } = await api('/users/me', { method: 'PATCH', body: { displayName, bio, avatarUrl } });
       onSaved(user);
     } catch (err) {
       setError(err.message);

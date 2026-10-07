@@ -1,20 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth as useClerkAuth, useClerk, useUser } from '@clerk/react';
 import { api, setTokenGetter } from './api.js';
 
 const AuthContext = createContext(null);
-const GOOGLE_BIRTHDAY = import.meta.env.VITE_GOOGLE_BIRTHDAY === 'true';
 
-// Auth0 owns sign-in; this layers the app profile (username, age-verified) on top.
+// Clerk owns sign-in; this layers the app profile (username, age-verified) on top.
 export function AuthProvider({ children }) {
-  const {
-    isLoading: auth0Loading,
-    isAuthenticated,
-    user: auth0User,
-    loginWithRedirect,
-    logout: auth0Logout,
-    getAccessTokenSilently,
-  } = useAuth0();
+  const { isLoaded, isSignedIn, getToken } = useClerkAuth();
+  const { user: clerkUser } = useUser();
+  const { openSignIn, openSignUp, signOut } = useClerk();
+  const isAuthenticated = !!isSignedIn;
   const [user, setUser] = useState(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   // From /auth/me during onboarding: { ageVerified, underage } when the sign-in provider supplied a birthday.
@@ -23,10 +18,10 @@ export function AuthProvider({ children }) {
   const [authPrompt, setAuthPrompt] = useState(false);
 
   // Assigned during render (not in an effect) so children's first requests already carry the token.
-  setTokenGetter(isAuthenticated ? getAccessTokenSilently : null);
+  setTokenGetter(isAuthenticated ? () => getToken() : null);
 
   useEffect(() => {
-    if (auth0Loading) return;
+    if (!isLoaded) return;
     if (!isAuthenticated) {
       setUser(null);
       setNeedsOnboarding(false);
@@ -42,26 +37,18 @@ export function AuthProvider({ children }) {
       })
       .catch(() => setUser(null))
       .finally(() => setProfileLoading(false));
-  }, [auth0Loading, isAuthenticated]);
+  }, [isLoaded, isAuthenticated, clerkUser?.id]);
 
+  // Clerk's modals keep the viewer on the current page; no redirect round-trip.
   const login = useCallback(
-    (signup = false) =>
-      loginWithRedirect({
-        appState: { returnTo: window.location.pathname },
-        authorizationParams: {
-          ...(signup && { screen_hint: 'signup' }),
-          // Asks Google for the birthday so onboarding can verify age without a typed date.
-          // Off until the Google connection uses your own OAuth keys (see README).
-          ...(GOOGLE_BIRTHDAY && { connection_scope: 'https://www.googleapis.com/auth/user.birthday.read' }),
-        },
-      }),
-    [loginWithRedirect]
+    (signup = false) => {
+      setAuthPrompt(false);
+      (signup ? openSignUp : openSignIn)();
+    },
+    [openSignIn, openSignUp]
   );
 
-  const logout = useCallback(
-    () => auth0Logout({ logoutParams: { returnTo: window.location.origin } }),
-    [auth0Logout]
-  );
+  const logout = useCallback(() => signOut({ redirectUrl: '/' }), [signOut]);
 
   const completeOnboarding = useCallback(async (fields) => {
     const d = await api('/auth/onboard', { method: 'POST', body: fields });
@@ -81,8 +68,8 @@ export function AuthProvider({ children }) {
       value={{
         user,
         setUser,
-        auth0User,
-        loading: auth0Loading || profileLoading,
+        clerkUser,
+        loading: !isLoaded || profileLoading,
         isAuthenticated,
         needsOnboarding,
         providerAge,

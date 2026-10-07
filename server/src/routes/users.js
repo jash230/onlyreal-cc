@@ -1,27 +1,11 @@
 import { Router } from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import crypto from 'node:crypto';
 import { User, Follow } from '../models.js';
 import { requireUser, optionalUser } from '../auth.js';
 import { publicUser } from '../serializers.js';
-import { UPLOAD_DIR } from '../paths.js';
 import { ah, escapeRegex, isDuplicateKey } from '../util.js';
+import { verifyUpload } from './uploads.js';
 
 const router = Router();
-
-const avatarUpload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (_req, file, cb) =>
-      cb(null, `avatar-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase() || '.jpg'}`),
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (/^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Avatar must be an image'));
-  },
-});
 
 const findByUsername = (username) => User.findOne({ usernameLower: String(username).toLowerCase() });
 
@@ -38,21 +22,19 @@ router.get(
   })
 );
 
-router.patch('/me', requireUser, (req, res, next) => {
-  avatarUpload.single('avatar')(req, res, async (err) => {
-    if (err) return res.status(400).json({ error: err.message });
-    try {
-      const u = req.user;
-      if (req.body.displayName !== undefined) u.displayName = String(req.body.displayName).trim().slice(0, 50) || u.username;
-      if (req.body.bio !== undefined) u.bio = String(req.body.bio).slice(0, 200);
-      if (req.file) u.avatarUrl = `/uploads/${req.file.filename}`;
-      await u.save();
-      res.json({ user: await publicUser(u, u) });
-    } catch (e) {
-      next(e);
-    }
-  });
-});
+router.patch(
+  '/me',
+  requireUser,
+  ah(async (req, res) => {
+    const u = req.user;
+    const { displayName, bio, avatarUrl } = req.body || {};
+    if (displayName !== undefined) u.displayName = String(displayName).trim().slice(0, 50) || u.username;
+    if (bio !== undefined) u.bio = String(bio).slice(0, 200);
+    if (avatarUrl) u.avatarUrl = (await verifyUpload(avatarUrl, 'avatars', u)).url;
+    await u.save();
+    res.json({ user: await publicUser(u, u) });
+  })
+);
 
 router.get(
   '/:username',

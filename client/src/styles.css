@@ -140,7 +140,6 @@ p { margin: 0; }
 .gate-copy { color: var(--dusk); line-height: 1.6; max-width: 52ch; }
 .gate-copy a { color: var(--lipstick-text); text-decoration: underline; text-underline-offset: 3px; }
 .gate-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-.gate-fine { font-size: 0.8125rem; color: var(--dusk); opacity: 0.85; }
 
 /* ---------- App shell + dock ---------- */
 .app { height: 100dvh; }
@@ -161,7 +160,7 @@ p { margin: 0; }
 .dock-item {
   position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  width: 68px; min-height: 60px; padding: 6px 0;
+  width: 68px; min-height: 64px; padding: 6px 0;
   background: none; border: 0; border-radius: 18px;
   color: var(--dusk); font-size: 0.72rem; font-weight: 650;
   transition: background-color 150ms, color 150ms;
@@ -173,6 +172,8 @@ p { margin: 0; }
   transform: translateY(-50%); border-radius: 0 4px 4px 0; background: var(--lipstick);
 }
 .dock-item svg { width: 24px; height: 24px; }
+/* Every item gets the same icon slot as the upload key, so labels and spacing line up. */
+.dock-icon { display: grid; place-items: center; height: 34px; }
 .upload-key {
   display: grid; place-items: center; width: 46px; height: 34px; border-radius: 12px; color: #fff;
   background: linear-gradient(180deg, var(--lipstick-hi), var(--lipstick) 55%, var(--lipstick-deep));
@@ -607,7 +608,8 @@ p { margin: 0; }
   .dock-logo { display: none; }
   .dock-item { flex: 1; width: auto; min-height: 52px; font-size: 0.6875rem; border-radius: 16px; }
   .dock-item.is-active::before { left: 50%; top: 2px; width: 18px; height: 3px; transform: translateX(-50%); border-radius: 0 0 3px 3px; }
-  .upload-key { width: 44px; height: 32px; }
+  .upload-key, .dock-icon { height: 32px; }
+  .upload-key { width: 44px; }
   .dock-more { flex: 1; margin-top: 0; display: flex; }
   .dock-more > .dock-item { width: 100%; }
   .popover { left: auto; right: 0; bottom: calc(100% + 12px); }

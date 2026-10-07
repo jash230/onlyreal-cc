@@ -5,8 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    // Auth0 callback URLs are registered for this exact port.
-    strictPort: true,
     proxy: {
       '/api': 'http://localhost:4000',
       '/uploads': 'http://localhost:4000',

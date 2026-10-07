@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 
-// Shown after the first Auth0 login, until the account has a username and verified age.
+// Shown after the first sign-in, until the account has a username and verified age.
 // Not dismissable: the only way out is finishing or logging out.
 export default function OnboardingModal() {
-  const { auth0User, completeOnboarding, logout, providerAge } = useAuth();
-  const suggested = (auth0User?.nickname || '').replace(/[^a-z0-9_.]/gi, '').slice(0, 24);
+  const { clerkUser, completeOnboarding, logout, providerAge } = useAuth();
+  const suggested = (clerkUser?.username || clerkUser?.primaryEmailAddress?.emailAddress.split('@')[0] || '')
+    .replace(/[^a-z0-9_.]/gi, '')
+    .slice(0, 24);
   const [form, setForm] = useState({
     username: suggested.length >= 3 ? suggested : '',
-    displayName: auth0User?.name && auth0User.name !== auth0User.email ? auth0User.name : '',
+    displayName: clerkUser?.fullName || '',
     birthDate: '',
     acceptTerms: false,
   });

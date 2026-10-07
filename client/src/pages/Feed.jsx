@@ -39,12 +39,12 @@ export default function Feed() {
             following ? (
               <>
                 <h2>Nothing here yet</h2>
-                <p>Follow creators from For You or Discover and their clips land here.</p>
+                <p>Follow creators from For You or Search and their clips land here.</p>
               </>
             ) : (
               <>
                 <h2>No clips yet</h2>
-                <p>Be the first to post something real.</p>
+                <p>Be the first to post!</p>
               </>
             )
           }

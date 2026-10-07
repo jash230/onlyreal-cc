@@ -5,12 +5,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import mongoose from 'mongoose';
 import { Feedback } from './models.js';
-import { optionalUser } from './auth.js';
+import { clerk, optionalUser } from './auth.js';
 import { UPLOAD_DIR, CLIENT_DIST } from './paths.js';
 import { ah } from './util.js';
 import authRoutes from './routes/auth.js';
 import videoRoutes from './routes/videos.js';
 import userRoutes from './routes/users.js';
+import uploadRoutes from './routes/uploads.js';
+
+config.clerk; // fail at startup, not on the first request, when Clerk keys are missing
 
 const app = express();
 
@@ -19,9 +22,11 @@ app.use(cors({ origin: config.clientOrigin }));
 app.use(express.json({ limit: '100kb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
 
+app.use('/api', clerk);
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.post(
   '/api/feedback',
@@ -44,11 +49,17 @@ if (fs.existsSync(CLIENT_DIST)) {
 }
 
 app.use((err, _req, res, _next) => {
-  // express-oauth2-jwt-bearer errors carry a status (401 invalid/missing token, 403 insufficient scope).
+  // Client errors (bad JSON, upload limits, …) carry their own status.
   if (err.status && err.status < 500) return res.status(err.status).json({ error: err.message || 'Unauthorized' });
   console.error(err);
   res.status(500).json({ error: 'Something went wrong' });
 });
 
 await mongoose.connect(config.mongoUri);
-app.listen(config.port, () => console.log(`OnlyReal API listening on http://localhost:${config.port}`));
+
+// On Vercel the exported app runs as a function; locally it listens itself.
+if (!process.env.VERCEL) {
+  app.listen(config.port, () => console.log(`OnlyReal API listening on http://localhost:${config.port}`));
+}
+
+export default app;

@@ -24,7 +24,7 @@ export default function Discover() {
   return (
     <div className="page page-wide">
       <header className="page-head">
-        <h1>Discover</h1>
+        <h1>Search</h1>
         <label className="search">
           <SearchIcon />
           <input

@@ -34,7 +34,8 @@ export default function App() {
         ) : (
           <Routes>
             <Route path="/" element={<Feed />} />
-            <Route path="/discover" element={<Discover />} />
+            <Route path="/search" element={<Discover />} />
+            <Route path="/discover" element={<Navigate to="/search" replace />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/me" element={<Me />} />
             <Route path="/u/:username" element={<Profile />} />

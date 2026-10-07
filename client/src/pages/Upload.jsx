@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
-import { uploadWithProgress } from '../api.js';
+import { api, uploadFile } from '../api.js';
 import { UploadIcon } from '../components/Icons.jsx';
 
 const MAX_MB = 200;
@@ -52,14 +52,10 @@ export default function Upload() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    const form = new FormData();
-    form.append('video', file);
-    form.append('caption', caption);
-    form.append('attestAge', String(attestAge));
-    form.append('attestConsent', String(attestConsent));
     try {
       setProgress(0);
-      const { video } = await uploadWithProgress('/videos', form, setProgress);
+      const url = await uploadFile('videos', user.id, file, setProgress);
+      const { video } = await api('/videos', { method: 'POST', body: { url, caption, attestAge, attestConsent } });
       navigate(`/v/${video.id}`);
     } catch (err) {
       setError(err.message);

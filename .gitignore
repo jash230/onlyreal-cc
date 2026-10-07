@@ -12,3 +12,4 @@ client/dist
 .auth0-mcp-writes.log
 
 .DS_Store
+.vercel

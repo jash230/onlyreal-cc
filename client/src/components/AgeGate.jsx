@@ -28,23 +28,18 @@ export default function AgeGate({ onPass }) {
         <span className="gate-wordmark">
           <img src="/logo.svg" alt="OnlyReal" width="251" height="64" />
         </span>
-        <h1 className="gate-title">Real people. Unfiltered clips. Adults only.</h1>
+        <h1 className="gate-title">No porn. OnlyReal.</h1>
         <p className="gate-copy">
-          OnlyReal contains sexually explicit material. Enter only if you're at least 18 (or the age of majority where you
-          live) and viewing adult content is legal for you. By entering you agree to our{' '}
-          <Link to="/legal/terms">Terms</Link>.
+          18+ only. By entering you agree to our <Link to="/legal/terms">Terms</Link>.
         </p>
         <div className="gate-actions">
           <button className="btn btn-primary btn-lg" onClick={pass} autoFocus>
-            I'm 18 or older, enter
+            I'm 18+, enter
           </button>
           <a className="btn btn-glass btn-lg" href="https://www.google.com" rel="noreferrer">
             Leave
           </a>
         </div>
-        <p className="gate-fine">
-          This site is labeled with RTA. Parents can block it with device-level parental controls.
-        </p>
       </div>
     </main>
   );

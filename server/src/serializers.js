@@ -44,7 +44,7 @@ export async function videoDtos(videos, viewer) {
   }
   return videos.map((v) => ({
     id: String(v._id),
-    url: `/uploads/${v.filename}`,
+    url: v.url || `/uploads/${v.filename}`,
     caption: v.caption,
     views: v.views,
     createdAt: v.createdAt,

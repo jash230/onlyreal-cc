@@ -1,25 +1,19 @@
 # OnlyReal
 
-An 18+ vertical video (reels) social network. React (Vite) client, Node + Express API, MongoDB (Mongoose), Auth0 for sign-in.
+An 18+ vertical video (reels) social network. React (Vite) client, Node + Express API, MongoDB (Mongoose), Clerk for sign-in.
 
 ## Setup
 
 ### 1. MongoDB
 Use [MongoDB Atlas](https://www.mongodb.com/atlas) (free tier is fine) or a local `mongod`. You need a connection string.
 
-### 2. Auth0
-In the [Auth0 dashboard](https://manage.auth0.com):
-
-1. **Applications → APIs → Create API.** Identifier e.g. `https://api.onlyreal.cc` (this is the *audience*), signing algorithm RS256. In its settings, enable **Allow Offline Access**.
-2. **Applications → Applications → Create Application → Single Page Application.** In its settings:
-   - Allowed Callback URLs, Allowed Logout URLs, Allowed Web Origins: `http://localhost:5173` (add your production URL too)
-   - **Refresh Token Rotation**: on
-3. Turn on whichever login methods you want under **Authentication** (database, Google, etc.).
+### 2. Clerk
+In the [Clerk dashboard](https://dashboard.clerk.com), create an application and turn on the sign-in methods you want (email, Google, etc.). Copy the **Publishable key** and **Secret key** from **Configure → API keys**. Add your production domain under **Domains** before going live.
 
 ### 3. Env files
 ```bash
-cp server/.env.example server/.env   # MONGODB_URI, AUTH0_DOMAIN, AUTH0_AUDIENCE
-cp client/.env.example client/.env   # VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, VITE_AUTH0_AUDIENCE
+cp server/.env.example server/.env              # MONGODB_URI, CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY
+cp client/.env.example client/.env.local        # VITE_CLERK_PUBLISHABLE_KEY
 ```
 
 ### 4. Run
@@ -29,25 +23,27 @@ npm run seed          # optional: demo creators + SFW placeholder clips (needs f
 npm run dev           # API on :4000, web on http://localhost:5173
 ```
 
-Production: `npm run build && npm start` serves the built client and API from one port (4000). Vite inlines the `VITE_*` vars at build time.
+Production runs on Vercel as two services (see `vercel.json`): `client` (Vite static build) and `server` (Express function), with `/api/*` routed to the server and everything else to the client. Deploy with `vercel --prod`; run both locally the same way with `vercel dev`. Vite inlines the `VITE_*` vars at build time.
+
+Videos and avatars upload from the browser straight to Vercel Blob; the API only signs uploads (`/api/uploads`) and stores the resulting URLs. Pull `BLOB_READ_WRITE_TOKEN` into `server/.env` with `vercel env pull` for local uploads.
 
 | Server env var          | Purpose                                              |
 | ----------------------- | ---------------------------------------------------- |
 | `MONGODB_URI`           | **Required.** Mongo connection string                 |
-| `AUTH0_DOMAIN`          | **Required.** e.g. `your-tenant.us.auth0.com`         |
-| `AUTH0_AUDIENCE`        | **Required.** The Auth0 API identifier                |
-| `AUTH0_ISSUER_BASE_URL` | Optional, for an Auth0 custom domain                  |
+| `CLERK_PUBLISHABLE_KEY` | **Required.** Clerk publishable key (`pk_…`)          |
+| `CLERK_SECRET_KEY`      | **Required.** Clerk secret key (`sk_…`)               |
 | `PORT`                  | API port (default `4000`)                             |
-| `UPLOAD_DIR`            | Where videos/avatars are saved (`server/uploads`)     |
+| `BLOB_READ_WRITE_TOKEN` | **Required for uploads.** Set by Vercel when a Blob store is connected |
+| `UPLOAD_DIR`            | Legacy local files served at `/uploads` (`server/uploads`) |
 | `CLIENT_ORIGIN`         | CORS origin (`http://localhost:5173`)                 |
 
 ## How auth works
 
-- The SPA signs in with Auth0 (`@auth0/auth0-react`, redirect flow, refresh tokens) and sends the access token as `Authorization: Bearer` on API calls.
-- The API validates it with `express-oauth2-jwt-bearer` (issuer, audience, RS256 signature via the tenant's JWKS).
+- The SPA signs in with Clerk (`@clerk/react`, sign-in/sign-up modals) and sends the Clerk session token as `Authorization: Bearer` on API calls.
+- The API verifies it with `@clerk/express` (`clerkMiddleware()` on `/api`, then `getAuth(req)` in `server/src/auth.js`).
 - On first login there's no app profile yet: `GET /api/auth/me` returns `needsOnboarding: true`, and the client shows a required step to pick a username, enter date of birth (must be 18+) and accept the terms (`POST /api/auth/onboard`). Until then every write endpoint answers `403 onboarding_required`.
-- Google sign-ins can skip the date-of-birth step: if `AUTH0_MGMT_CLIENT_ID`/`AUTH0_MGMT_CLIENT_SECRET` are set and `VITE_GOOGLE_BIRTHDAY=true`, the client asks Google for the `user.birthday.read` scope and the server reads the birthday from the People API (`server/src/googleAge.js`) with the Google token Auth0 stored. A Google birthday always overrides a typed one; under-18 is rejected. If Google has no full birthday (year included), the user types it. This needs your own Google OAuth client on the Auth0 Google connection with the People API enabled, and Google verification of that sensitive scope before public launch.
-- Users are linked by the Auth0 `sub` (`users.auth0Id`). Emails and passwords live only in Auth0.
+- Google sign-ins can skip the date-of-birth step: the server fetches the user's Google token from Clerk (`users.getUserOauthAccessToken`) and reads the birthday from the People API (`server/src/googleAge.js`). A Google birthday always overrides a typed one; under-18 is rejected. If Google has no full birthday (year included), or the scope wasn't granted, the user types it. To enable it, give Clerk's Google connection your own Google OAuth credentials, add the `https://www.googleapis.com/auth/user.birthday.read` scope there, and enable the People API in Google Cloud. Google must verify that sensitive scope before public launch.
+- Users are linked by their Clerk user id (`users.clerkId`). Emails and passwords live only in Clerk.
 - Seeded demo creators have `seed|…` ids, so nobody can log in as them.
 
 ## Features
@@ -68,7 +64,7 @@ Production: `npm run build && npm start` serves the built client and API from on
 
 ## Before going live
 
-This is an MVP. A real adult platform also needs: third-party ID/age verification for creators (and for viewers where the law requires it), a moderation/admin dashboard for `reports`, CSAM hash-matching on upload (e.g. PhotoDNA / NCMEC), object storage + CDN and transcoding instead of local disk, rate limiting, Auth0 email verification enforced (e.g. an Action that blocks unverified users), and a payment provider that accepts adult merchants if you add subscriptions.
+This is an MVP. A real adult platform also needs: third-party ID/age verification for creators (and for viewers where the law requires it), a moderation/admin dashboard for `reports`, CSAM hash-matching on upload (e.g. PhotoDNA / NCMEC), video transcoding, rate limiting, verified email required at sign-up (a Clerk setting), and a payment provider that accepts adult merchants if you add subscriptions.
 
 ## Layout
 
@@ -77,12 +73,12 @@ server/src/
   index.js        Express app, static serving, Mongo connect
   config.js       env vars
   models.js       Mongoose schemas
-  auth.js         Auth0 JWT middleware + age helper
+  auth.js         Clerk session middleware + age helper
   serializers.js  API DTOs
   routes/         auth (me, onboard), videos, users
   seed.js         demo data
 client/src/
-  AuthContext.jsx Auth0 session + app profile/onboarding
+  AuthContext.jsx Clerk session + app profile/onboarding
   pages/          Feed, Discover, Upload, Me, Profile, VideoPage, Legal
   components/     Reel, ReelFeed, AgeGate, OnboardingModal, LoginPrompt, Nav…
 ```

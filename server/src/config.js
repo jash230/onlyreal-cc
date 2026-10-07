@@ -9,19 +9,13 @@ function required(name) {
 export const config = {
   port: process.env.PORT || 4000,
   mongoUri: required('MONGODB_URI'),
-  // Getter so scripts that never touch auth (e.g. seed) don't need Auth0 vars.
-  get auth0() {
+  // Getter so scripts that never touch auth (e.g. seed) don't need Clerk keys.
+  // @clerk/express reads both from the environment; this just fails fast when they're missing.
+  get clerk() {
     return {
-      audience: required('AUTH0_AUDIENCE'),
-      // AUTH0_ISSUER_BASE_URL lets you use an Auth0 custom domain; otherwise derived from AUTH0_DOMAIN.
-      issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL || `https://${required('AUTH0_DOMAIN')}/`,
+      publishableKey: required('CLERK_PUBLISHABLE_KEY'),
+      secretKey: required('CLERK_SECRET_KEY'),
     };
-  },
-  // Optional M2M app (Management API: read:users, read:user_idp_tokens). When set, Google
-  // sign-ins get their birthday from Google instead of typing it during onboarding.
-  get auth0Mgmt() {
-    const { AUTH0_DOMAIN: domain, AUTH0_MGMT_CLIENT_ID: clientId, AUTH0_MGMT_CLIENT_SECRET: clientSecret } = process.env;
-    return domain && clientId && clientSecret ? { domain, clientId, clientSecret } : null;
   },
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
 };

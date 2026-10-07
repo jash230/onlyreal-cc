@@ -1,4 +1,4 @@
-# Never upload secrets or local state to Railway builds.
+# Never upload secrets or local state to Vercel builds.
 .env
 **/.env
 **/.env.*
@@ -9,4 +9,4 @@ node_modules
 **/node_modules
 client/dist
 server/uploads/*
-favicon.png
+/favicon.png

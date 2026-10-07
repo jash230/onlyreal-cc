@@ -16,12 +16,6 @@ export const HomeIcon = ({ filled, ...p }) => (
     <path d="M4 10.2 12 4l8 6.2V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z" fill={filled ? 'currentColor' : 'none'} />
   </svg>
 );
-export const CompassIcon = ({ filled, ...p }) => (
-  <svg {...base} {...p}>
-    <circle cx="12" cy="12" r="8.5" fill={filled ? 'currentColor' : 'none'} />
-    <path d="m15.2 8.8-1.9 4.5-4.5 1.9 1.9-4.5z" fill={filled ? 'var(--velvet)' : 'none'} stroke={filled ? 'var(--velvet)' : 'currentColor'} />
-  </svg>
-);
 export const PlusIcon = (p) => (
   <svg {...base} strokeWidth={2.25} {...p}>
     <path d="M12 5v14M5 12h14" />

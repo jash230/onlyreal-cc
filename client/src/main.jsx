@@ -1,37 +1,37 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, useNavigate } from 'react-router-dom';
-import { Auth0Provider } from '@auth0/auth0-react';
+import { BrowserRouter } from 'react-router-dom';
+import { ClerkProvider } from '@clerk/react';
 import App from './App.jsx';
 import { AuthProvider } from './AuthContext.jsx';
 import './styles.css';
 
-const { VITE_AUTH0_DOMAIN: domain, VITE_AUTH0_CLIENT_ID: clientId, VITE_AUTH0_AUDIENCE: audience } = import.meta.env;
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-function Auth0WithRouter({ children }) {
-  const navigate = useNavigate();
-  return (
-    <Auth0Provider
-      domain={domain}
-      clientId={clientId}
-      authorizationParams={{ redirect_uri: window.location.origin, audience }}
-      // Refresh tokens keep users signed in across reloads without third-party cookies.
-      useRefreshTokens
-      cacheLocation="localstorage"
-      onRedirectCallback={(appState) => navigate(appState?.returnTo || '/', { replace: true })}
-    >
-      {children}
-    </Auth0Provider>
-  );
-}
+// Matches the app's dark tokens in styles.css so Clerk's sign-in modals feel native.
+const appearance = {
+  variables: {
+    colorPrimary: '#ff2d6f',
+    colorBackground: '#15151c',
+    colorForeground: '#f4f4f7',
+    colorMutedForeground: '#9a9aab',
+    colorNeutral: '#f4f4f7',
+    colorInput: '#1e1e28',
+    colorInputForeground: '#f4f4f7',
+    colorBorder: '#2a2a36',
+    colorDanger: '#ff4d4d',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    borderRadius: '14px',
+  },
+};
 
 function MissingConfig() {
   return (
     <div className="page center">
-      <h1>Auth0 is not configured</h1>
+      <h1>Clerk is not configured</h1>
       <p className="muted">
-        Copy <code>client/.env.example</code> to <code>client/.env</code> and fill in your Auth0 domain, client ID
-        and API audience, then restart the dev server.
+        Copy <code>client/.env.example</code> to <code>client/.env.local</code>, add your Clerk publishable key, then
+        restart the dev server.
       </p>
     </div>
   );
@@ -39,14 +39,14 @@ function MissingConfig() {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {domain && clientId && audience ? (
-      <BrowserRouter>
-        <Auth0WithRouter>
+    {PUBLISHABLE_KEY ? (
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/" appearance={appearance}>
+        <BrowserRouter>
           <AuthProvider>
             <App />
           </AuthProvider>
-        </Auth0WithRouter>
-      </BrowserRouter>
+        </BrowserRouter>
+      </ClerkProvider>
     ) : (
       <MissingConfig />
     )}

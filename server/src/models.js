@@ -3,10 +3,10 @@ import mongoose from 'mongoose';
 const { Schema, model, Types } = mongoose;
 const ref = (name) => ({ type: Types.ObjectId, ref: name, required: true, index: true });
 
-// Auth0 owns credentials; this is the app profile, created on first login (onboarding).
+// Clerk owns credentials; this is the app profile, created on first login (onboarding).
 const userSchema = new Schema(
   {
-    auth0Id: { type: String, required: true, unique: true },
+    clerkId: { type: String, required: true, unique: true },
     username: { type: String, required: true },
     usernameLower: { type: String, required: true, unique: true },
     displayName: { type: String, required: true },
@@ -23,6 +23,7 @@ const videoSchema = new Schema(
   {
     user: ref('User'),
     filename: { type: String, required: true },
+    url: { type: String, default: null }, // Vercel Blob URL; older local uploads only have filename
     caption: { type: String, default: '' },
     views: { type: Number, default: 0 },
     likeCount: { type: Number, default: 0 },

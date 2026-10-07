@@ -1,33 +1,17 @@
 import { Router } from 'express';
-import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
-import crypto from 'node:crypto';
+import { del } from '@vercel/blob';
 import { Video, Like, Follow, Comment, ConsentAttestation, Report, User } from '../models.js';
 import { requireUser, optionalUser } from '../auth.js';
 import { videoDto, videoDtos, authorDto } from '../serializers.js';
 import { UPLOAD_DIR } from '../paths.js';
 import { ah, isId, isDuplicateKey } from '../util.js';
+import { verifyUpload } from './uploads.js';
 
 const router = Router();
 const PAGE_SIZE = 10;
-const ALLOWED = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const REPORT_REASONS = new Set(['underage', 'non_consensual', 'illegal', 'spam', 'copyright', 'other']);
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase() || '.mp4';
-      cb(null, `${crypto.randomUUID()}${ext}`);
-    },
-  }),
-  limits: { fileSize: 200 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (ALLOWED.has(file.mimetype)) cb(null, true);
-    else cb(new Error('Only MP4, WebM or MOV videos are allowed'));
-  },
-});
 
 const page = (req) => Math.max(0, parseInt(req.query.page, 10) || 0);
 
@@ -118,38 +102,38 @@ router.get(
   })
 );
 
-router.post('/', requireUser, (req, res, next) => {
-  upload.single('video')(req, res, async (err) => {
-    if (err) return res.status(400).json({ error: err.message });
-    if (!req.file) return res.status(400).json({ error: 'Choose a video to upload' });
-
-    const discard = () => fs.unlink(req.file.path, () => {});
-    if (req.body.attestAge !== 'true' || req.body.attestConsent !== 'true') {
-      discard();
+router.post(
+  '/',
+  requireUser,
+  ah(async (req, res) => {
+    const { url, caption, attestAge, attestConsent } = req.body || {};
+    if (attestAge !== true || attestConsent !== true) {
       return res.status(400).json({
         error: 'You must confirm everyone in the video is 18+ and consented to filming and publishing',
       });
     }
+    const blob = await verifyUpload(url, 'videos', req.user);
 
     let video;
     try {
       video = await Video.create({
         user: req.user._id,
-        filename: req.file.filename,
-        caption: String(req.body.caption || '').slice(0, 300),
+        filename: blob.pathname,
+        url: blob.url,
+        caption: String(caption || '').slice(0, 300),
       });
       await ConsentAttestation.create({ video: video._id, user: req.user._id, ip: req.ip, filename: video.filename });
     } catch (e) {
       // No multi-document transactions on standalone Mongo: undo by hand.
       if (video) await Video.deleteOne({ _id: video._id }).catch(() => {});
-      discard();
-      return next(e);
+      await del(blob.url).catch(() => {});
+      throw e;
     }
 
     video.user = req.user;
     res.status(201).json({ video: await videoDto(video, req.user) });
-  });
-});
+  })
+);
 
 router.delete(
   '/:id',
@@ -163,7 +147,8 @@ router.delete(
       Like.deleteMany({ video: video._id }),
       Comment.deleteMany({ video: video._id }),
     ]);
-    fs.unlink(path.join(UPLOAD_DIR, video.filename), () => {});
+    if (video.url) await del(video.url).catch(() => {});
+    else fs.unlink(path.join(UPLOAD_DIR, video.filename), () => {});
     res.status(204).end();
   })
 );
