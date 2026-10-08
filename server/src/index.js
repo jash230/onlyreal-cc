@@ -8,6 +8,7 @@ import { Feedback } from './models.js';
 import { clerk, optionalUser } from './auth.js';
 import { UPLOAD_DIR, CLIENT_DIST } from './paths.js';
 import { ah } from './util.js';
+import { rateLimit } from './rateLimit.js';
 import authRoutes from './routes/auth.js';
 import videoRoutes from './routes/videos.js';
 import userRoutes from './routes/users.js';
@@ -22,6 +23,7 @@ app.use(cors({ origin: config.clientOrigin }));
 app.use(express.json({ limit: '100kb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
 
+app.use('/api', rateLimit);
 app.use('/api', clerk);
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);

@@ -20,4 +20,9 @@ export const config = {
   // Clerk user ids (user_…) allowed to delete any clip from the site. Comma-separated.
   adminClerkIds: new Set((process.env.ADMIN_CLERK_IDS || '').split(',').map((s) => s.trim()).filter(Boolean)),
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  // Optional: rate limiting is skipped when these are unset (e.g. local dev).
+  upstash:
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+      ? { url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN }
+      : null,
 };
